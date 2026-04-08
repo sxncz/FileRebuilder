@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using FileRebuilderApp.Services;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -19,5 +20,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        var restoreService = new RestoreService();
+
+        restoreService.RestoreFile(1); // use your actual metadata Id
     }
 }
