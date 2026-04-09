@@ -4,6 +4,10 @@
              xmlns:local="clr-namespace:FileRebuilderApp"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+
+        <SolidColorBrush x:Key="BackgroundColor" Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="CardColor" Color="#2D2D30"/>
+        <SolidColorBrush x:Key="TextColor" Color="White"/>
+
     </Application.Resources>
 </Application>

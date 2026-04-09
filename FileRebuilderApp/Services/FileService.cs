@@ -17,19 +17,16 @@ namespace FileRebuilderApp.Services
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"File not found: {filePath}");
 
-            // 1. Read file
-            var content = File.ReadAllBytes(filePath);
-
-            // 2. Store content
-            int contentId = _databaseService.InsertFileContent(content);
-
-            // 3. Store metadata
             var fileName = Path.GetFileName(filePath);
 
-            _databaseService.InsertFileMetadata(fileName, filePath, contentId);
+            if (_databaseService.FileExists(fileName, filePath))
+                throw new Exception("A file with the same name or path has already been backed up.");
 
-            // 4. Delete original file
-            File.Delete(filePath);
+            var content = File.ReadAllBytes(filePath);
+
+            int contentId = _databaseService.InsertFileContent(content);
+
+            _databaseService.InsertFileMetadata(fileName, filePath, contentId);
         }
     }
 }

@@ -1,14 +1,8 @@
-﻿using FileRebuilderApp.Services;
-using System.Text;
+﻿using FileRebuilderApp.Data;
+using FileRebuilderApp.Models;
+using FileRebuilderApp.Services;
+using Microsoft.Win32;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace FileRebuilderApp;
 
@@ -17,12 +11,95 @@ namespace FileRebuilderApp;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private readonly FileService _fileService = new FileService();
+    private readonly RestoreService _restoreService = new RestoreService();
+    private readonly DatabaseService _databaseService = new DatabaseService();
+    private List<FileRecord> _allFiles = new();
+
     public MainWindow()
     {
         InitializeComponent();
+        LoadFiles();
+    }
 
-        var restoreService = new RestoreService();
+    private void Browse_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog();
 
-        restoreService.RestoreFile(1); // use your actual metadata Id
+        if (dialog.ShowDialog() == true)
+        {
+            FilePathTextBox.Text = dialog.FileName;
+        }
+    }
+
+    private void Backup_Click(object sender, RoutedEventArgs e)
+    {
+        var path = FilePathTextBox.Text;
+
+        if (!string.IsNullOrEmpty(path))
+        {
+            try
+            {
+                _fileService.BackupFile(path);
+                MessageBox.Show("File backed up successfully!");
+
+                LoadFiles();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}");
+            }
+        }
+    }
+
+    private void Restore_Click(object sender, RoutedEventArgs e)
+    {
+        if (FilesListBox.SelectedItem is not FileRecord selectedFile)
+        {
+            MessageBox.Show("Please select a file.");
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            FileName = selectedFile.FileName
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            _restoreService.RestoreFile(selectedFile.Id, dialog.FileName);
+            MessageBox.Show("File restored successfully!");
+        }
+    }
+
+    private void LoadFiles()
+    {
+        _allFiles = _databaseService.GetAllFiles();
+        FilesListBox.ItemsSource = _allFiles;
+    }
+
+    private void Search_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        var query = SearchTextBox.Text.ToLower();
+
+        var filtered = _allFiles
+            .Where(f => f.FileName.ToLower().Contains(query))
+            .ToList();
+
+        FilesListBox.ItemsSource = filtered;
+    }
+
+    private void Delete_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not FileRecord file)
+            return;
+
+        var result = MessageBox.Show($"Are you sure you want to delete '{file.FileName}'?", "Confirm Delete", MessageBoxButton.YesNo);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            _databaseService.DeleteFile(file.Id);
+            LoadFiles();
+        }
     }
 }

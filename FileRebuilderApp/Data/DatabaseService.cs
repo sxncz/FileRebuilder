@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using FileRebuilderApp.Models;
+using Microsoft.Data.SqlClient;
 using System.Configuration;
 
 
@@ -88,6 +89,59 @@ namespace FileRebuilderApp.Data
                 return (byte[])result;
 
             throw new Exception("File content not found");
+        }
+
+        //Fetch all files
+        public List<FileRecord> GetAllFiles()
+        {
+            var files = new List<FileRecord>();
+
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var query = "SELECT Id, FileName, OriginalPath FROM FileMetadata";
+
+            using var command = new SqlCommand(query, connection);
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                files.Add(new FileRecord
+                {
+                    Id = reader.GetInt32(0),
+                    FileName = reader.GetString(1),
+                    OriginalPath = reader.GetString(2)
+                });
+            }
+
+            return files;
+        }
+
+        public bool FileExists(string fileName, string originalPath)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var query = "SELECT COUNT(1) FROM FileMetadata WHERE OriginalPath = @OriginalPath OR FileName = @FileName";
+
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@FileName", fileName);
+            command.Parameters.AddWithValue("@OriginalPath", originalPath);
+
+            return (int)command.ExecuteScalar() > 0;
+        }
+
+        public void DeleteFile(int id)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var query = "DELETE FROM FileMetadata WHERE Id = @Id";
+
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@Id", id);
+
+            command.ExecuteNonQuery();
         }
     }
 }
