@@ -44,3 +44,29 @@ BEGIN
     );
 END
 GO
+
+-- Add Hash Column
+IF NOT EXISTS (
+    SELECT * 
+    FROM sys.columns 
+    WHERE Name = N'Hash' 
+      AND Object_ID = Object_ID(N'FileContent')
+)
+BEGIN
+    ALTER TABLE FileContent
+    ADD Hash NVARCHAR(64);
+END
+GO
+
+-- Add unique constraint
+IF NOT EXISTS (
+    SELECT * 
+    FROM sys.indexes 
+    WHERE name = N'UQ_FileContent_Hash'
+      AND object_id = OBJECT_ID(N'FileContent')
+)
+BEGIN
+    ALTER TABLE FileContent
+    ADD CONSTRAINT UQ_FileContent_Hash UNIQUE (Hash);
+END
+GO

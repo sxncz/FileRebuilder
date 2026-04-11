@@ -17,15 +17,16 @@ namespace FileRebuilderApp.Data
         }
 
         // Insert file content and return its Id
-        public int InsertFileContent(byte[] content)
+        public int InsertFileContent(byte[] content, string hash)
         {
             using var connection = new SqlConnection(_connectionString);
             connection.Open();
 
-            var query = "INSERT INTO FileContent (Content) OUTPUT INSERTED.Id VALUES (@Content)";
+            var query = "INSERT INTO FileContent (Content, Hash) OUTPUT INSERTED.Id VALUES (@Content, @Hash)";
 
             using var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@Content", content);
+            command.Parameters.AddWithValue("@Hash", hash);
 
             return (int)command.ExecuteScalar();
         }
@@ -131,16 +132,75 @@ namespace FileRebuilderApp.Data
             return (int)command.ExecuteScalar() > 0;
         }
 
-        public void DeleteFile(int id)
+        public void DeleteFile(int metadataId)
         {
             using var connection = new SqlConnection(_connectionString);
             connection.Open();
 
-            var query = "DELETE FROM FileMetadata WHERE Id = @Id";
+            int contentId;
+
+            var getQuery = "SELECT ContentId FROM FileMetadata WHERE Id = @Id";
+
+            using (var getCommand = new SqlCommand(getQuery, connection))
+            {
+                getCommand.Parameters.AddWithValue("@Id", metadataId);
+                contentId = (int)getCommand.ExecuteScalar();
+            }
+
+            var deleteMetadataQuery = "DELETE FROM FileMetadata WHERE Id = @Id";
+
+            using (var deleteCommand = new SqlCommand(deleteMetadataQuery, connection))
+            {
+                deleteCommand.Parameters.AddWithValue("@Id", metadataId);
+                deleteCommand.ExecuteNonQuery();
+            }
+
+            var usageCount = GetContentUsageCount(contentId);
+
+            if (usageCount == 0)
+            {
+                DeleteFileContent(contentId);
+            }
+        }
+
+        public int? GetContentIdByHash(string hash)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var query = @"SELECT Id from FileContent WHERE Hash = @Hash";
 
             using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@Id", id);
+            command.Parameters.AddWithValue("@Hash", hash);
 
+            var result = command.ExecuteScalar();
+
+            return result != null ? (int?)result : null;
+        }
+
+        public int GetContentUsageCount(int contentId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var query = "SELECT COUNT(1) FROM FileMetadata WHERE ContentId = @ContentId";
+
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@ContentId", contentId);
+
+            return (int)command.ExecuteScalar();
+        }
+
+        public void DeleteFileContent(int contentId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var query = "DELETE FROM FileContent WHERE Id = @Id";
+
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@Id", contentId);
+            
             command.ExecuteNonQuery();
         }
     }

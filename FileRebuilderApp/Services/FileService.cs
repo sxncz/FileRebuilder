@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using FileRebuilderApp.Data;
+using FileRebuilderApp.Helpers;
 
 namespace FileRebuilderApp.Services
 {
@@ -24,7 +25,20 @@ namespace FileRebuilderApp.Services
 
             var content = File.ReadAllBytes(filePath);
 
-            int contentId = _databaseService.InsertFileContent(content);
+            var hash = HashHelper.ComputeHash(content);
+
+            var existingContentId = _databaseService.GetContentIdByHash(hash);
+
+            int contentId;
+
+            if (existingContentId.HasValue)
+            {
+                contentId = existingContentId.Value;
+            }
+            else
+            {
+               contentId = _databaseService.InsertFileContent(content, hash);
+            }
 
             _databaseService.InsertFileMetadata(fileName, filePath, contentId);
         }
