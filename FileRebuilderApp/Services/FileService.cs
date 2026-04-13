@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using FileRebuilderApp.Data;
 using FileRebuilderApp.Helpers;
+using FileRebuilderApp.Models;
 
 namespace FileRebuilderApp.Services
 {
@@ -13,7 +14,7 @@ namespace FileRebuilderApp.Services
             _databaseService = new DatabaseService();
         }
 
-        public void BackupFile(string filePath)
+        public BackupResult BackupFile(string filePath)
         {
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"File not found: {filePath}");
@@ -23,24 +24,41 @@ namespace FileRebuilderApp.Services
             if (_databaseService.FileExists(fileName, filePath))
                 throw new Exception("A file with the same name or path has already been backed up.");
 
-            var content = File.ReadAllBytes(filePath);
+            var rawContent = File.ReadAllBytes(filePath);
 
-            var hash = HashHelper.ComputeHash(content);
+            var hash = HashHelper.ComputeHash(rawContent);
 
             var existingContentId = _databaseService.GetContentIdByHash(hash);
 
             int contentId;
+            long compressedSize;
+            bool reused = false;
 
             if (existingContentId.HasValue)
             {
                 contentId = existingContentId.Value;
+
+                var existingContent = _databaseService.GetFileContentById(contentId);
+                compressedSize = existingContent.Length;
+
+                reused = true;
             }
             else
             {
-               contentId = _databaseService.InsertFileContent(content, hash);
+                var compressedContent = CompressionHelper.Compress(rawContent);
+                compressedSize = compressedContent.Length;
+
+                contentId = _databaseService.InsertFileContent(compressedContent, hash);
             }
 
             _databaseService.InsertFileMetadata(fileName, filePath, contentId);
+
+            return new BackupResult
+            {
+                OriginalSize = rawContent.Length,
+                CompressedSize = compressedSize,
+                UsedExistingContent = reused
+            };
         }
     }
 }

@@ -74,7 +74,7 @@ namespace FileRebuilderApp.Data
         }
 
         //Fetch content by ContentId
-        public byte[] GetFileContent(int contentId)
+        public byte[] GetFileContentById(int contentId)
         {
             using var connection = new SqlConnection(_connectionString);
             connection.Open();

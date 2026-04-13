@@ -1,4 +1,5 @@
 ﻿using FileRebuilderApp.Data;
+using FileRebuilderApp.Helpers;
 using System.IO;
 
 namespace FileRebuilderApp.Services
@@ -15,7 +16,9 @@ namespace FileRebuilderApp.Services
         public void RestoreFile(int metadataId, string customPath = null)
         {
             var metadata = _databaseService.GetFileMetadata(metadataId);
-            var content = _databaseService.GetFileContent(metadata.ContentId);
+            var compressedContent = _databaseService.GetFileContentById(metadata.ContentId);
+
+            var content = CompressionHelper.Decompress(compressedContent);
 
             var path = customPath ?? metadata.OriginalPath;
 

@@ -3,6 +3,7 @@ using FileRebuilderApp.Models;
 using FileRebuilderApp.Services;
 using Microsoft.Win32;
 using System.Windows;
+using FileRebuilderApp.Helpers;
 
 namespace FileRebuilderApp;
 
@@ -11,10 +12,11 @@ namespace FileRebuilderApp;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private readonly FileService _fileService = new FileService();
-    private readonly RestoreService _restoreService = new RestoreService();
-    private readonly DatabaseService _databaseService = new DatabaseService();
-    private List<FileRecord> _allFiles = new();
+    private readonly FileService _fileService = new();
+    private readonly RestoreService _restoreService = new();
+    private readonly DatabaseService _databaseService = new();
+    private readonly CommonHelpers _commonHelpers = new();
+    private List<FileRecord> _allFiles = [];
 
     public MainWindow()
     {
@@ -40,8 +42,16 @@ public partial class MainWindow : Window
         {
             try
             {
-                _fileService.BackupFile(path);
-                MessageBox.Show("File backed up successfully!");
+                var result = _fileService.BackupFile(path);
+
+                string message = $"File backed up successfully!\n" +
+                                 $"Original Size: {_commonHelpers.FormatSize(result.OriginalSize)} bytes\n" +
+                                 $"Compressed Size: {_commonHelpers.FormatSize(result.CompressedSize)} bytes\n";
+
+                if (result.UsedExistingContent)
+                    message += "\nNote: This file's content was already backed up, so it was not stored again.";
+
+                MessageBox.Show(message);
 
                 LoadFiles();
             }
